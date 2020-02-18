@@ -309,6 +309,8 @@ pub struct BitcoinTransactionInput<N: BitcoinNetwork> {
     pub witnesses: Vec<Vec<u8>>,
     /// If true, the input has been signed
     pub is_signed: bool,
+    /// Sometimes there are multiple signatures that need to be in a specific order
+    pub additional_witness: Option<(Vec<u8>, bool)>,
 }
 
 impl<N: BitcoinNetwork> BitcoinTransactionInput<N> {
@@ -655,10 +657,21 @@ impl<N: BitcoinNetwork> Transaction for BitcoinTransaction<N> {
 
                         let ser_input_script = [variable_length_integer(input_script.len() as u64)?, input_script].concat();
                         transaction.parameters.segwit_flag = true;
-                        transaction.parameters.inputs[vin].script_sig = vec![]; // length of empty scriptSig
-                        transaction.parameters.inputs[vin]
-                            .witnesses
-                            .append(&mut vec![signature.clone(), ser_input_script.clone()]);
+                        transaction.parameters.inputs[vin].script_sig = vec![];
+                        let (other_signature, is_other_sig_first) = match transaction.parameters.inputs[vin].additional_witness.clone() {
+                            Some(n) => (n.0, n.1),
+                            None => return Err(TransactionError::InvalidInputs("P2WSH".into())),
+                        };
+                        // TODO: check that other_signature is correctly specified
+                        // Determine whether to append or prepend other signature(s)
+                        let mut witness_field = match is_other_sig_first {
+                            true => vec![other_signature, signature.clone()],
+                            false => vec![signature.clone(), other_signature]
+                        };
+                        // Append the witness script
+                        witness_field.append(&mut vec![ser_input_script.clone()]);
+                        transaction.parameters.inputs[vin].witnesses
+                            .append(&mut witness_field);
                         transaction.parameters.inputs[vin].is_signed = true;
                     }
                     BitcoinFormat::P2SH_P2WPKH => {
