@@ -309,6 +309,8 @@ pub struct BitcoinTransactionInput<N: BitcoinNetwork> {
     pub witnesses: Vec<Vec<u8>>,
     /// If true, the input has been signed
     pub is_signed: bool,
+    /// Provide more flexibility for multiple signatures (for P2WSH)
+    pub additional_witness: Option<(Vec<u8>, bool)>
 }
 
 impl<N: BitcoinNetwork> BitcoinTransactionInput<N> {
@@ -350,6 +352,7 @@ impl<N: BitcoinNetwork> BitcoinTransactionInput<N> {
             sighash_code: sighash,
             witnesses: vec![],
             is_signed: false,
+            additional_witness: None
         })
     }
 
@@ -392,6 +395,7 @@ impl<N: BitcoinNetwork> BitcoinTransactionInput<N> {
             sighash_code,
             witnesses: vec![],
             is_signed: script_sig.len() > 0,
+            additional_witness: None
         })
     }
 
