@@ -310,7 +310,9 @@ pub struct BitcoinTransactionInput<N: BitcoinNetwork> {
     /// If true, the input has been signed
     pub is_signed: bool,
     /// Provide more flexibility for multiple signatures (for P2WSH)
-    pub additional_witness: Option<(Vec<u8>, bool)>
+    pub additional_witness: Option<(Vec<u8>, bool)>,
+    /// Option for additional witness stack script args
+    pub witness_script_data: Option<Vec<Vec<u8>>>
 }
 
 impl<N: BitcoinNetwork> BitcoinTransactionInput<N> {
@@ -352,7 +354,8 @@ impl<N: BitcoinNetwork> BitcoinTransactionInput<N> {
             sighash_code: sighash,
             witnesses: vec![],
             is_signed: false,
-            additional_witness: None
+            additional_witness: None,
+            witness_script_data: None,
         })
     }
 
@@ -395,7 +398,8 @@ impl<N: BitcoinNetwork> BitcoinTransactionInput<N> {
             sighash_code,
             witnesses: vec![],
             is_signed: script_sig.len() > 0,
-            additional_witness: None
+            additional_witness: None,
+            witness_script_data: None
         })
     }
 
@@ -670,7 +674,12 @@ impl<N: BitcoinNetwork> Transaction for BitcoinTransaction<N> {
                             true => vec![other_signature, signature.clone()],
                             false => vec![signature.clone(), other_signature]
                         };
-                        // Append the witness script
+                        // Append witness stack script args (before witness script)
+                        if transaction.parameters.inputs[vin].witness_script_data.is_some() {
+                            let witness_script_data = transaction.parameters.inputs[vin].witness_script_data.clone();
+                            transaction.parameters.inputs[vin].witnesses.append(&mut witness_script_data.unwrap());
+                        }
+                        // Append the witness script last
                         witness_field.append(&mut vec![ser_input_script.clone()]);
                         transaction.parameters.inputs[vin].witnesses
                             .append(&mut witness_field);
