@@ -678,16 +678,12 @@ impl<N: BitcoinNetwork> Transaction for BitcoinTransaction<N> {
                         if transaction.parameters.inputs[vin].witness_script_data.is_some() {
                             let witness_script_data = transaction.parameters.inputs[vin].witness_script_data.clone().unwrap();
                             let witness_script_data = [vec![witness_script_data.len() as u8], witness_script_data].concat();
-                            transaction.parameters.inputs[vin].witnesses.append(&mut vec![witness_script_data]);
+                            witness_field.append(&mut vec![witness_script_data]);
                         }
                         // Append the witness script last
                         witness_field.append(&mut vec![ser_input_script.clone()]);
                         transaction.parameters.inputs[vin].witnesses
                             .append(&mut witness_field);
-                        // DEBUG only
-                        for i in 0..witness_field.len() {
-                            println!("DEBUG: witness => {} : {}", i+1, hex::encode(&witness_field[i]));
-                        }
                         transaction.parameters.inputs[vin].is_signed = true;
                     }
                     BitcoinFormat::P2SH_P2WPKH => {
