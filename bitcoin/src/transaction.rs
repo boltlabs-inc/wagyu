@@ -312,7 +312,7 @@ pub struct BitcoinTransactionInput<N: BitcoinNetwork> {
     /// Provide more flexibility for multiple signatures (for P2WSH)
     pub additional_witness: Option<(Vec<u8>, bool)>,
     /// Option for additional witness stack script args
-    pub witness_script_data: Option<Vec<Vec<u8>>>
+    pub witness_script_data: Option<Vec<u8>>
 }
 
 impl<N: BitcoinNetwork> BitcoinTransactionInput<N> {
@@ -676,13 +676,18 @@ impl<N: BitcoinNetwork> Transaction for BitcoinTransaction<N> {
                         };
                         // Append witness stack script args (before witness script)
                         if transaction.parameters.inputs[vin].witness_script_data.is_some() {
-                            let witness_script_data = transaction.parameters.inputs[vin].witness_script_data.clone();
-                            transaction.parameters.inputs[vin].witnesses.append(&mut witness_script_data.unwrap());
+                            let witness_script_data = transaction.parameters.inputs[vin].witness_script_data.clone().unwrap();
+                            let witness_script_data = [vec![witness_script_data.len() as u8], witness_script_data].concat();
+                            transaction.parameters.inputs[vin].witnesses.append(&mut vec![witness_script_data]);
                         }
                         // Append the witness script last
                         witness_field.append(&mut vec![ser_input_script.clone()]);
                         transaction.parameters.inputs[vin].witnesses
                             .append(&mut witness_field);
+                        // DEBUG only
+                        for i in 0..witness_field.len() {
+                            println!("DEBUG: witness => {} : {}", i+1, hex::encode(&witness_field[i]));
+                        }
                         transaction.parameters.inputs[vin].is_signed = true;
                     }
                     BitcoinFormat::P2SH_P2WPKH => {
